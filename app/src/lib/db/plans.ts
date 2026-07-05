@@ -6,12 +6,16 @@ import prisma from "./index";
 const PLANS_FILE = path.resolve(process.cwd(), "../personas/plans.json");
 
 function ensureFile() {
-  const dir = path.dirname(PLANS_FILE);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-  if (!fs.existsSync(PLANS_FILE)) {
-    fs.writeFileSync(PLANS_FILE, JSON.stringify([], null, 2), "utf-8");
+  try {
+    const dir = path.dirname(PLANS_FILE);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    if (!fs.existsSync(PLANS_FILE)) {
+      fs.writeFileSync(PLANS_FILE, JSON.stringify([], null, 2), "utf-8");
+    }
+  } catch (error) {
+    console.warn("Skipped plans file creation (expected on serverless read-only filesystems like Vercel).");
   }
 }
 

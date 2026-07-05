@@ -15,12 +15,16 @@ const defaultSettings: AppSettings = {
 };
 
 function ensureFile() {
-  const dir = path.dirname(SETTINGS_FILE);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-  if (!fs.existsSync(SETTINGS_FILE)) {
-    fs.writeFileSync(SETTINGS_FILE, JSON.stringify(defaultSettings, null, 2), "utf-8");
+  try {
+    const dir = path.dirname(SETTINGS_FILE);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    if (!fs.existsSync(SETTINGS_FILE)) {
+      fs.writeFileSync(SETTINGS_FILE, JSON.stringify(defaultSettings, null, 2), "utf-8");
+    }
+  } catch (error) {
+    console.warn("Skipped settings file creation (expected on serverless read-only filesystems like Vercel).");
   }
 }
 

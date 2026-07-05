@@ -18,12 +18,16 @@ const defaultAccounts: Account[] = [
 ];
 
 function ensureFile() {
-  const dir = path.dirname(ACCOUNTS_FILE);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-  if (!fs.existsSync(ACCOUNTS_FILE)) {
-    fs.writeFileSync(ACCOUNTS_FILE, JSON.stringify(defaultAccounts, null, 2), "utf-8");
+  try {
+    const dir = path.dirname(ACCOUNTS_FILE);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    if (!fs.existsSync(ACCOUNTS_FILE)) {
+      fs.writeFileSync(ACCOUNTS_FILE, JSON.stringify(defaultAccounts, null, 2), "utf-8");
+    }
+  } catch (error) {
+    console.warn("Skipped accounts file creation (expected on serverless read-only filesystems like Vercel).");
   }
 }
 

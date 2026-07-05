@@ -14,12 +14,16 @@ export interface AlertItem {
 }
 
 function ensureFile() {
-  const dir = path.dirname(ALERTS_FILE);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-  if (!fs.existsSync(ALERTS_FILE)) {
-    fs.writeFileSync(ALERTS_FILE, JSON.stringify([], null, 2), "utf-8");
+  try {
+    const dir = path.dirname(ALERTS_FILE);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    if (!fs.existsSync(ALERTS_FILE)) {
+      fs.writeFileSync(ALERTS_FILE, JSON.stringify([], null, 2), "utf-8");
+    }
+  } catch (error) {
+    console.warn("Skipped alerts file creation (expected on serverless read-only filesystems like Vercel).");
   }
 }
 

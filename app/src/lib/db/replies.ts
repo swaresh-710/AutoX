@@ -6,12 +6,16 @@ import prisma from "./index";
 const REPLIES_FILE = path.resolve(process.cwd(), "../personas/replies.json");
 
 function ensureFile() {
-  const dir = path.dirname(REPLIES_FILE);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-  if (!fs.existsSync(REPLIES_FILE)) {
-    fs.writeFileSync(REPLIES_FILE, JSON.stringify([], null, 2), "utf-8");
+  try {
+    const dir = path.dirname(REPLIES_FILE);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    if (!fs.existsSync(REPLIES_FILE)) {
+      fs.writeFileSync(REPLIES_FILE, JSON.stringify([], null, 2), "utf-8");
+    }
+  } catch (error) {
+    console.warn("Skipped replies file creation (expected on serverless read-only filesystems like Vercel).");
   }
 }
 
