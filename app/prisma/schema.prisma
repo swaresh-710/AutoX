@@ -1,0 +1,129 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Account {
+  id                   String        @id @default(uuid())
+  name                 String
+  handle               String        @unique
+  personaId            String?       // references the persona filename key
+  publishMethod        String        @default("manual") // "x-api", "typefully", "manual"
+  color                String
+  status               String        @default("disconnected") // "connected", "disconnected", "error"
+  apiKey               String?       // encrypted or plain in env.local
+  apiSecret            String?
+  accessToken          String?
+  accessTokenSecret    String?
+  typefullyApiKey      String?
+  capxMix              Int           @default(55)
+  nicheMix             Int           @default(30)
+  personalMix          Int           @default(15)
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  weeklyPlans          WeeklyPlan[]
+  tweets               Tweet[]
+}
+
+model WeeklyPlan {
+  id        String        @id @default(uuid())
+  accountId String
+  personaId String
+  weekStart DateTime      // Monday date
+  status    String        @default("planned") // "planned", "generating", "generated", "reviewed", "scheduled"
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  account   Account       @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  slots     ContentSlot[]
+}
+
+model ContentSlot {
+  id                String         @id @default(uuid())
+  weeklyPlanId      String
+  dayOfWeek         Int            // 0=Mon, 6=Sun
+  date              DateTime
+  pillar            String         // "capx", "niche", "personal"
+  scheduledTime     String         // "HH:MM"
+  status            String         @default("draft") // "draft", "approved", "scheduled", "published", "failed"
+  selectedVariantId String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  weeklyPlan        WeeklyPlan     @relation(fields: [weeklyPlanId], references: [id], onDelete: Cascade)
+  variants          TweetVariant[]
+}
+
+model TweetVariant {
+  id             String      @id @default(uuid())
+  contentSlotId  String
+  body           String      @db.Text
+  generatedBy    String      // "gemini-flash", "claude-sonnet"
+  traitsUsed     String[]
+  factsUsed      String[]
+  seedTweetsUsed String[]
+  nicheContext   String?     @db.Text
+  promptVersion  String      @default("1.0")
+  createdAt      DateTime    @default(now())
+  contentSlot    ContentSlot @relation(fields: [contentSlotId], references: [id], onDelete: Cascade)
+}
+
+model Tweet {
+  id                String           @id @default(uuid())
+  accountId         String
+  personaId         String
+  pillar            String
+  body              String           @db.Text
+  status            String           @default("draft")
+  scheduledAt       DateTime?
+  publishedAt       DateTime?
+  xTweetId          String?
+  traitsUsed        String[]
+  factsUsed         String[]
+  seedTweetsUsed    String[]
+  nicheContext      String?          @db.Text
+  promptVersion     String           @default("1.0")
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  account           Account          @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  metricSnapshots   MetricSnapshot[]
+}
+
+model ReplyDraft {
+  id               String    @id @default(uuid())
+  sourceTweetUrl   String
+  sourceTweetText  String    @db.Text
+  personaId        String
+  variants         String[]
+  selectedVariant  String?   @db.Text
+  status           String    @default("drafted") // "drafted", "approved", "sent", "failed"
+  sentAt           DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+}
+
+model MetricSnapshot {
+  id           String   @id @default(uuid())
+  tweetId      String
+  impressions  Int      @default(0)
+  likes        Int      @default(0)
+  replies      Int      @default(0)
+  reposts      Int      @default(0)
+  bookmarks    Int      @default(0)
+  linkClicks   Int      @default(0)
+  capturedAt   DateTime @default(now())
+  tweet        Tweet    @relation(fields: [tweetId], references: [id], onDelete: Cascade)
+}
+
+model AppSettings {
+  id                  String   @id @default("global")
+  defaultModel        String   @default("gemini-flash")
+  capxMixDefault      Int      @default(55)
+  nicheMixDefault     Int      @default(30)
+  personalMixDefault   Int      @default(15)
+  postsPerWeekDefault Int      @default(7)
+  postingTimesDefault String[] // e.g. ["09:00", "13:00", "18:00"]
+  updatedAt           DateTime @updatedAt
+}
