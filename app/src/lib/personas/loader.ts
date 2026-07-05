@@ -3,7 +3,7 @@ import path from "path";
 import { Persona } from "@/types";
 import { parsePersonaMarkdown, serializePersonaMarkdown } from "./parser";
 
-const PERSONAS_DIR = path.resolve(process.cwd(), "../personas");
+const PERSONAS_DIR = path.resolve(process.cwd(), "personas");
 
 /**
  * Ensures the personas directory exists.

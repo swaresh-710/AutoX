@@ -3,7 +3,7 @@ import path from "path";
 import { Account, ContentMix } from "@/types";
 import prisma from "./index";
 
-const ACCOUNTS_FILE = path.resolve(process.cwd(), "../personas/accounts.json");
+const ACCOUNTS_FILE = path.resolve(process.cwd(), "personas/accounts.json");
 
 const defaultMix: ContentMix = { capx: 55, niche: 30, personal: 15 };
 

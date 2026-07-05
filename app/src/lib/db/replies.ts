@@ -3,7 +3,7 @@ import path from "path";
 import { ReplyDraft } from "@/types";
 import prisma from "./index";
 
-const REPLIES_FILE = path.resolve(process.cwd(), "../personas/replies.json");
+const REPLIES_FILE = path.resolve(process.cwd(), "personas/replies.json");
 
 function ensureFile() {
   try {

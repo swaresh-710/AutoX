@@ -3,7 +3,7 @@ import path from "path";
 import { WeeklyPlan, ContentSlot } from "@/types";
 import prisma from "./index";
 
-const PLANS_FILE = path.resolve(process.cwd(), "../personas/plans.json");
+const PLANS_FILE = path.resolve(process.cwd(), "personas/plans.json");
 
 function ensureFile() {
   try {

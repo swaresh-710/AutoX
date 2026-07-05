@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 
-const ALERTS_FILE = path.resolve(process.cwd(), "../personas/alerts.json");
+const ALERTS_FILE = path.resolve(process.cwd(), "personas/alerts.json");
 
 export interface AlertItem {
   id: string;

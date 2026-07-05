@@ -3,7 +3,7 @@ import path from "path";
 import { AppSettings, ContentMix } from "@/types";
 import prisma from "./index";
 
-const SETTINGS_FILE = path.resolve(process.cwd(), "../personas/settings.json");
+const SETTINGS_FILE = path.resolve(process.cwd(), "personas/settings.json");
 
 const defaultSettings: AppSettings = {
   defaultModel: "gemini-flash",
