@@ -4,9 +4,10 @@ import { NextRequest, NextResponse } from "next/server";
  * HTTP Basic Auth for the whole app (pages + API routes).
  *
  * Enabled only when BOTH BASIC_AUTH_USER and BASIC_AUTH_PASS are set, so
- * local development keeps working without credentials. The publish cron
- * endpoint is excluded — it has its own CRON_SECRET bearer check, and
- * Vercel Cron / external schedulers can't send Basic Auth.
+ * local development keeps working without credentials. Scheduler endpoints
+ * (publish cron, metrics refresh) are excluded — they have their own
+ * CRON_SECRET bearer check, and Vercel Cron / external schedulers can't
+ * send Basic Auth.
  */
 export function middleware(request: NextRequest) {
   const user = process.env.BASIC_AUTH_USER;
@@ -16,7 +17,8 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  if (request.nextUrl.pathname.startsWith("/api/publish/cron")) {
+  const path = request.nextUrl.pathname;
+  if (path.startsWith("/api/publish/cron") || path.startsWith("/api/metrics/refresh")) {
     return NextResponse.next();
   }
 

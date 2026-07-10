@@ -13,32 +13,37 @@ export interface PublishOptions {
 }
 
 /**
+ * Build an OAuth 1.0a user-context X client for an account from its
+ * X_ACCOUNT_<id>_* environment variables. Returns null when the account's
+ * credentials are not fully configured. Shared by publishing and metrics
+ * ingestion.
+ */
+export function createXClient(accountId: string): TwitterApi | null {
+  const appKey = process.env[`X_ACCOUNT_${accountId}_API_KEY`] || "";
+  const appSecret = process.env[`X_ACCOUNT_${accountId}_API_SECRET`] || "";
+  const accessToken = process.env[`X_ACCOUNT_${accountId}_ACCESS_TOKEN`] || "";
+  const accessSecret = process.env[`X_ACCOUNT_${accountId}_ACCESS_TOKEN_SECRET`] || "";
+
+  if (!appKey || !appSecret || !accessToken || !accessSecret) {
+    return null;
+  }
+
+  return new TwitterApi({ appKey, appSecret, accessToken, accessSecret });
+}
+
+/**
  * Publish a tweet directly to X/Twitter using the account's API credentials.
  */
 async function publishToX(account: Account, text: string, options?: PublishOptions): Promise<PublishResult> {
-  const accountId = account.id;
-
-  // Retrieve keys from environment variables matching prefix
-  const appKey = process.env[`X_ACCOUNT_${accountId}_API_KEY` || ""] || "";
-  const appSecret = process.env[`X_ACCOUNT_${accountId}_API_SECRET` || ""] || "";
-  const accessToken = process.env[`X_ACCOUNT_${accountId}_ACCESS_TOKEN` || ""] || "";
-  const accessSecret = process.env[`X_ACCOUNT_${accountId}_ACCESS_TOKEN_SECRET` || ""] || "";
-
-  if (!appKey || !appSecret || !accessToken || !accessSecret) {
+  const client = createXClient(account.id);
+  if (!client) {
     return {
       success: false,
-      error: `Missing X API credentials in environment for Account ${account.name} (X_ACCOUNT_${accountId}_*)`,
+      error: `Missing X API credentials in environment for Account ${account.name} (X_ACCOUNT_${account.id}_*)`,
     };
   }
 
   try {
-    const client = new TwitterApi({
-      appKey,
-      appSecret,
-      accessToken,
-      accessSecret,
-    });
-
     const response = await client.v2.tweet(
       text,
       options?.inReplyToTweetId

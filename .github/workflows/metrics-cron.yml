@@ -1,0 +1,36 @@
+name: Refresh tweet metrics
+
+# Pulls current X metrics for every published tweet into the database.
+# Uses the same repository secrets as the publish workflow:
+#   CRON_URL    — base publish URL is derived from this, e.g.
+#                 https://your-app.vercel.app/api/publish/cron
+#   CRON_SECRET — same value as the CRON_SECRET env var on Vercel
+
+on:
+  schedule:
+    - cron: "20 */6 * * *" # every 6 hours (offset to avoid the publish runs)
+  workflow_dispatch: {}
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call metrics refresh endpoint
+        env:
+          CRON_URL: ${{ secrets.CRON_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "CRON_URL / CRON_SECRET secrets not configured — skipping."
+            exit 0
+          fi
+          BASE_URL="${CRON_URL%/api/publish/cron}"
+          METRICS_URL="$BASE_URL/api/metrics/refresh"
+          response=$(curl -sS -w "\n%{http_code}" -X POST "$METRICS_URL" \
+            -H "Authorization: Bearer $CRON_SECRET")
+          body=$(echo "$response" | head -n -1)
+          status=$(echo "$response" | tail -n 1)
+          echo "URL: $METRICS_URL"
+          echo "Status: $status"
+          echo "Body: $body"
+          [ "$status" = "200" ]

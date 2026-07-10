@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AccountPerformance } from "@/app/api/analytics/route";
+import { AccountPerformance, TopTweet } from "@/app/api/analytics/route";
 
 import { Pillar } from "@/types";
 
@@ -23,6 +23,7 @@ const pillarColors: Record<Pillar, string> = {
 
 export default function AnalyticsPage() {
   const [performances, setPerformances] = useState<AccountPerformance[]>([]);
+  const [topTweets, setTopTweets] = useState<TopTweet[]>([]);
   const [totals, setTotals] = useState({
     impressions: 0,
     likes: 0,
@@ -42,6 +43,7 @@ export default function AnalyticsPage() {
       if (data.success) {
         setPerformances(data.performances);
         setTotals(data.totals);
+        setTopTweets(data.topTweets || []);
       }
     } catch (err) {
       console.error("Failed to load analytics data:", err);
@@ -80,12 +82,6 @@ export default function AnalyticsPage() {
     if (metricTab === "impressions") return p.impressions;
     return p.engagementRate;
   }));
-
-  const mockTopTweets = [
-    { id: "t1", handle: "@persona1", text: "Autonomous business networks are the next paradigm. orchestrating multi-agents dynamically on-chain is lowkey the easiest way to launch. Capx is building this rail fr.", pillar: "capx", engagements: 42, clicks: 18 },
-    { id: "t2", handle: "@persona5", text: "honestly spent 3 hours building custom agent playbooks today. coding up multi-step loops is lowkey addictive. who wants to check the code?", pillar: "niche", engagements: 29, clicks: 5 },
-    { id: "t3", handle: "@persona3", text: "pixel just ate my printed checklist sheet. guess i'm running full auto mode for the remainder of this batch. literal definition of agent takeover.", pillar: "personal", engagements: 35, clicks: 0 },
-  ];
 
   const handleCopyDigest = () => {
     const bestPerformer = [...performances].sort((a, b) => b.clicks - a.clicks)[0];
@@ -305,11 +301,18 @@ Generated on: ${new Date().toLocaleDateString()}
           <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
             <div className="card" style={{ padding: "20px" }}>
               <h3 style={{ fontSize: "15px", fontWeight: 600, color: "var(--text-primary)", marginBottom: "16px" }}>
-                Top Performing Tweets (This Week)
+                Top Performing Tweets
               </h3>
-              
+
+              {topTweets.length === 0 && (
+                <p style={{ fontSize: "12px", color: "var(--text-tertiary)", margin: 0 }}>
+                  No metrics yet. Tweets published via the X API get their stats pulled in by
+                  the metrics refresh job — check back after the first refresh runs.
+                </p>
+              )}
+
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                {mockTopTweets.map((t) => (
+                {topTweets.map((t) => (
                   <div
                     key={t.id}
                     style={{

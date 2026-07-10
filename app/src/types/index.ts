@@ -141,6 +141,9 @@ export interface ContentSlot {
   variants: TweetVariant[];
   selectedVariantId: string | null;
   status: ContentStatus;
+  /** X tweet ID, set when published via the X API — enables metrics ingestion. */
+  xTweetId?: string | null;
+  publishedAt?: string | null;
 }
 
 export interface TweetVariant {

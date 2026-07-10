@@ -44,12 +44,20 @@ Posts with status `approved`/`scheduled` are published by `POST /api/publish/cro
 - `vercel.json` registers a daily Vercel cron (Hobby-tier limit). Vercel sends the `CRON_SECRET` bearer header automatically when that env var is set.
 - For minute-level scheduling, `.github/workflows/publish-cron.yml` pings the endpoint every 15 minutes. Configure the `CRON_URL` and `CRON_SECRET` repository secrets on GitHub. (Any external scheduler works — it just needs the bearer header.)
 
+## Metrics & analytics
+
+When the publish cron posts via the X API it stores the resulting tweet ID on the slot. `POST /api/metrics/refresh` (same `CRON_SECRET` bearer auth as the publish cron) then pulls each tweet's `public_metrics` (and `non_public_metrics` like link clicks, when the API access level allows) and stores a snapshot in Postgres. The Analytics page computes everything — impressions, likes, replies, link clicks, engagement rate, top tweets — from the latest snapshot per tweet. No data shows as zeros, never as fabricated numbers.
+
+- `.github/workflows/metrics-cron.yml` refreshes metrics every 6 hours (reuses the `CRON_URL`/`CRON_SECRET` secrets).
+- `vercel.json` also registers a daily refresh as a backup.
+- Only tweets published with method `x-api` are tracked — manual and Typefully posts have no tweet ID to look up.
+
 ## Replies
 
 Replies are posted as true threaded replies (`in_reply_to_tweet_id` is extracted from the source tweet URL). This requires the account's publish method to be `x-api`; Typefully does not support replying to arbitrary tweets.
 
 ## Known limitations
 
-- Analytics numbers are currently mock/demo data — no real X metrics ingestion yet.
 - Account API credentials are read from environment variables (`X_ACCOUNT_<n>_*`), not from the database; the Accounts page connection status is informational.
+- Link-click counts require the X API access level that permits `non_public_metrics`; otherwise they show as 0 while impressions/likes/replies still work.
 - X API free tier caps writes (~500 posts/month per app). 7 accounts posting daily plus replies will likely need the Basic tier or Typefully.

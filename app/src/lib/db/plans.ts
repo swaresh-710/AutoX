@@ -74,6 +74,8 @@ function mapDbPlan(plan: DbPlanWithSlots): WeeklyPlan {
       scheduledTime: slot.scheduledTime,
       status: slot.status as any,
       selectedVariantId: slot.selectedVariantId,
+      xTweetId: slot.xTweetId,
+      publishedAt: slot.publishedAt ? slot.publishedAt.toISOString() : null,
       variants: slot.variants.map((v) => ({
         id: v.id,
         body: v.body,
@@ -192,6 +194,8 @@ export async function saveWeeklyPlan(plan: WeeklyPlan): Promise<boolean> {
             scheduledTime: slot.scheduledTime,
             status: slot.status,
             selectedVariantId: slot.selectedVariantId,
+            xTweetId: slot.xTweetId ?? undefined,
+            publishedAt: slot.publishedAt ? new Date(slot.publishedAt) : undefined,
           },
           create: {
             id: slot.id,
@@ -202,6 +206,8 @@ export async function saveWeeklyPlan(plan: WeeklyPlan): Promise<boolean> {
             scheduledTime: slot.scheduledTime,
             status: slot.status,
             selectedVariantId: slot.selectedVariantId,
+            xTweetId: slot.xTweetId ?? null,
+            publishedAt: slot.publishedAt ? new Date(slot.publishedAt) : null,
           },
         });
 

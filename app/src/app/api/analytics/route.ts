@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { getAccounts } from "@/lib/db/accounts";
 import { getAllPlans } from "@/lib/db/plans";
+import { getLatestMetricsBySlot } from "@/lib/metrics";
+
+export const dynamic = "force-dynamic";
 
 export interface AccountPerformance {
   id: string;
@@ -12,21 +15,36 @@ export interface AccountPerformance {
   replies: number;
   clicks: number;
   tweetsCount: number;
+  /** Published tweets that have at least one metric snapshot. */
+  trackedTweetsCount: number;
   engagementRate: number;
+}
+
+export interface TopTweet {
+  id: string;
+  handle: string;
+  text: string;
+  pillar: string;
+  engagements: number;
+  impressions: number;
+  clicks: number;
 }
 
 export async function GET() {
   try {
     const accounts = await getAccounts();
     const plans = await getAllPlans();
+    const metricsBySlot = await getLatestMetricsBySlot();
+
+    const topTweetCandidates: TopTweet[] = [];
 
     const performances: AccountPerformance[] = accounts.map((act) => {
-      // Calculate real stats from published slots of this account
       let impressions = 0;
       let likes = 0;
       let replies = 0;
       let clicks = 0;
       let tweetsCount = 0;
+      let trackedTweetsCount = 0;
 
       plans
         .filter((p) => p.accountId === act.id)
@@ -35,37 +53,33 @@ export async function GET() {
             .filter((s) => s.status === "published")
             .forEach((slot) => {
               tweetsCount++;
-              
-              // Seed deterministic mock numbers based on slot id to keep it stable
-              const seed = slot.id.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
-              
-              // Capx tweets get higher click counts
-              const isCapx = slot.pillar === "capx";
-              
-              const slotImpressions = 1200 + (seed % 800);
-              const slotLikes = Math.round(slotImpressions * (0.02 + (seed % 30) / 1000));
-              const slotReplies = Math.round(slotLikes * (0.1 + (seed % 10) / 100));
-              const slotClicks = isCapx ? 15 + (seed % 25) : 1 + (seed % 4);
 
-              impressions += slotImpressions;
-              likes += slotLikes;
-              replies += slotReplies;
-              clicks += slotClicks;
+              const metrics = metricsBySlot.get(slot.id);
+              if (!metrics) return;
+
+              trackedTweetsCount++;
+              impressions += metrics.impressions;
+              likes += metrics.likes;
+              replies += metrics.replies;
+              clicks += metrics.linkClicks;
+
+              const selectedVar =
+                slot.variants.find((v) => v.id === slot.selectedVariantId) || slot.variants[0];
+              topTweetCandidates.push({
+                id: slot.id,
+                handle: act.handle,
+                text: selectedVar?.body || "",
+                pillar: slot.pillar,
+                engagements: metrics.likes + metrics.replies + metrics.reposts,
+                impressions: metrics.impressions,
+                clicks: metrics.linkClicks,
+              });
             });
         });
 
-      // If no tweets are published, seed baseline stats for the demo so it looks nice
-      if (tweetsCount === 0) {
-        const seed = act.id.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
-        impressions = 4500 + (seed % 1500);
-        likes = 120 + (seed % 60);
-        replies = 15 + (seed % 10);
-        clicks = 42 + (seed % 20);
-        tweetsCount = 3 + (seed % 3);
-      }
-
       const totalEngagements = likes + replies;
-      const engagementRate = impressions > 0 ? parseFloat(((totalEngagements / impressions) * 100).toFixed(1)) : 0;
+      const engagementRate =
+        impressions > 0 ? parseFloat(((totalEngagements / impressions) * 100).toFixed(1)) : 0;
 
       return {
         id: act.id,
@@ -77,6 +91,7 @@ export async function GET() {
         replies,
         clicks,
         tweetsCount,
+        trackedTweetsCount,
         engagementRate,
       };
     });
@@ -94,7 +109,14 @@ export async function GET() {
     );
 
     const totalEngagements = totals.likes + totals.replies;
-    const avgEngagementRate = totals.impressions > 0 ? parseFloat(((totalEngagements / totals.impressions) * 100).toFixed(1)) : 0;
+    const avgEngagementRate =
+      totals.impressions > 0
+        ? parseFloat(((totalEngagements / totals.impressions) * 100).toFixed(1))
+        : 0;
+
+    const topTweets = topTweetCandidates
+      .sort((a, b) => b.engagements - a.engagements)
+      .slice(0, 3);
 
     return NextResponse.json({
       success: true,
@@ -103,6 +125,7 @@ export async function GET() {
         engagementRate: avgEngagementRate,
       },
       performances,
+      topTweets,
     });
   } catch (error: any) {
     return NextResponse.json(

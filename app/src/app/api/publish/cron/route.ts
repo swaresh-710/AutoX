@@ -4,6 +4,7 @@ import { getAllPlans, saveWeeklyPlan } from "@/lib/db/plans";
 import { publishTweet } from "@/lib/publisher";
 import { addAlert } from "@/lib/db/alerts";
 import { slotDueAt, getScheduleTimezone } from "@/lib/time";
+import { isCronAuthorized } from "@/lib/cronAuth";
 import { WeeklyPlan } from "@/types";
 
 // The cron does real work (posts tweets) — never let Next.js cache it.
@@ -17,22 +18,8 @@ export async function POST(request: Request) {
   return handleCron(request);
 }
 
-function isAuthorized(request: Request): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) {
-    // No secret configured — allow only outside production so local dev works.
-    if (process.env.NODE_ENV === "production") {
-      console.error("[Cron] CRON_SECRET is not set; refusing to run in production.");
-      return false;
-    }
-    return true;
-  }
-  const auth = request.headers.get("authorization") || "";
-  return auth === `Bearer ${secret}`;
-}
-
 async function handleCron(request: Request) {
-  if (!isAuthorized(request)) {
+  if (!isCronAuthorized(request)) {
     return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
   }
 
@@ -97,7 +84,14 @@ async function handleCron(request: Request) {
             text,
             method: account.publishMethod,
           });
-          updatedSlots.push({ ...slot, status: "published" as const });
+          updatedSlots.push({
+            ...slot,
+            status: "published" as const,
+            publishedAt: now.toISOString(),
+            // Only a real X tweet ID enables metrics ingestion; manual/typefully
+            // publishing returns placeholder/draft IDs which we don't store.
+            xTweetId: account.publishMethod === "x-api" ? result.tweetId ?? null : slot.xTweetId ?? null,
+          });
         } else {
           failedList.push({
             slotId: slot.id,
