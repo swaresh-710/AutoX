@@ -19,17 +19,8 @@ export default function AccountsPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedAccount, setSelectedAccount] = useState<Account | null>(null);
   const [saving, setSaving] = useState(false);
+  const [verifying, setVerifying] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
-
-  // Temporary state for credential inputs to prevent saving immediately
-  const [apiKeys, setApiKeys] = useState({
-    apiKey: "",
-    apiSecret: "",
-    accessToken: "",
-    accessTokenSecret: "",
-    bearerToken: "",
-    typefullyApiKey: "",
-  });
 
   const fetchAccounts = async () => {
     try {
@@ -54,27 +45,33 @@ export default function AccountsPage() {
 
   const handleSelectAccount = (account: Account) => {
     setSelectedAccount(account);
-    setApiKeys({
-      apiKey: "",
-      apiSecret: "",
-      accessToken: "",
-      accessTokenSecret: "",
-      bearerToken: "",
-      typefullyApiKey: "",
-    });
+  };
+
+  const handleVerify = async () => {
+    try {
+      setVerifying(true);
+      const res = await fetch("/api/accounts/verify", { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        showToast(`${data.connected}/${data.total} accounts connected to the X API`, data.connected > 0 ? "success" : "error");
+        await fetchAccounts();
+      } else {
+        showToast(data.error || "Verification failed", "error");
+      }
+    } catch (err: any) {
+      showToast(err.message || "Verification failed", "error");
+    } finally {
+      setVerifying(false);
+    }
   };
 
   const handleSaveConfig = async () => {
     if (!selectedAccount) return;
     try {
       setSaving(true);
-      
-      // Compute configuration flags for rendering in list
-      const updatedAccount: Account = {
-        ...selectedAccount,
-        apiKeyConfigured: selectedAccount.publishMethod === "x-api" ? true : selectedAccount.apiKeyConfigured,
-        typefullyConfigured: selectedAccount.publishMethod === "typefully" ? true : selectedAccount.typefullyConfigured,
-      };
+
+      // Configured flags are derived server-side from env vars — send as-is.
+      const updatedAccount: Account = { ...selectedAccount };
 
       const res = await fetch("/api/accounts", {
         method: "POST",
@@ -199,9 +196,14 @@ export default function AccountsPage() {
               </button>
             </div>
           ) : (
-            <button className="btn btn-secondary btn-sm" onClick={fetchAccounts}>
-              Refresh Accounts
-            </button>
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button className="btn btn-secondary btn-sm" onClick={fetchAccounts}>
+                Refresh Accounts
+              </button>
+              <button className="btn btn-primary btn-sm" onClick={handleVerify} disabled={verifying}>
+                {verifying ? "Verifying..." : "Verify Connections"}
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -304,6 +306,28 @@ export default function AccountsPage() {
 
                       {/* Status Badges */}
                       <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                        <div style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "6px",
+                          padding: "4px 10px",
+                          borderRadius: "var(--radius-full)",
+                          background: account.status === "connected"
+                            ? "var(--accent-secondary-muted)"
+                            : account.status === "error"
+                            ? "rgba(255, 90, 90, 0.15)"
+                            : "var(--bg-tertiary)",
+                          fontSize: "11px",
+                          fontWeight: 500,
+                          color: account.status === "connected"
+                            ? "var(--accent-secondary)"
+                            : account.status === "error"
+                            ? "var(--accent-danger)"
+                            : "var(--text-tertiary)",
+                        }}>
+                          <div style={{ width: "6px", height: "6px", borderRadius: "50%", background: "currentColor" }} />
+                          {account.status === "connected" ? "Connected" : account.status === "error" ? "Auth Error" : "Not Verified"}
+                        </div>
                         <div style={{
                           display: "flex",
                           alignItems: "center",
@@ -508,64 +532,27 @@ export default function AccountsPage() {
               {selectedAccount.publishMethod === "x-api" && (
                 <div style={{ display: "flex", flexDirection: "column", gap: "12px", borderTop: "1px solid var(--border-secondary)", paddingTop: "20px" }}>
                   <h4 style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-secondary)" }}>
-                    X API Keys & Access Tokens
+                    X API Credentials
                   </h4>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                    <div>
-                      <label className="label">API Key</label>
-                      <input
-                        type="password"
-                        className="input"
-                        placeholder={selectedAccount.apiKeyConfigured ? "••••••••••••••••" : "Paste API Key"}
-                        value={apiKeys.apiKey}
-                        onChange={(e) => setApiKeys({ ...apiKeys, apiKey: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label className="label">API Secret</label>
-                      <input
-                        type="password"
-                        className="input"
-                        placeholder={selectedAccount.apiKeyConfigured ? "••••••••••••••••" : "Paste API Secret"}
-                        value={apiKeys.apiSecret}
-                        onChange={(e) => setApiKeys({ ...apiKeys, apiSecret: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-                    <div>
-                      <label className="label">Access Token</label>
-                      <input
-                        type="password"
-                        className="input"
-                        placeholder={selectedAccount.apiKeyConfigured ? "••••••••••••••••" : "Paste Access Token"}
-                        value={apiKeys.accessToken}
-                        onChange={(e) => setApiKeys({ ...apiKeys, accessToken: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label className="label">Access Token Secret</label>
-                      <input
-                        type="password"
-                        className="input"
-                        placeholder={selectedAccount.apiKeyConfigured ? "••••••••••••••••" : "Paste Access Token Secret"}
-                        value={apiKeys.accessTokenSecret}
-                        onChange={(e) => setApiKeys({ ...apiKeys, accessTokenSecret: e.target.value })}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="label">Bearer Token (optional)</label>
-                    <input
-                      type="password"
-                      className="input"
-                      placeholder="Paste Bearer Token"
-                      value={apiKeys.bearerToken}
-                      onChange={(e) => setApiKeys({ ...apiKeys, bearerToken: e.target.value })}
-                    />
-                  </div>
-                  <div style={{ padding: "10px 12px", background: "var(--bg-tertiary)", borderRadius: "var(--radius-md)", fontSize: "12px", color: "var(--text-tertiary)" }}>
-                    Keys will write securely to <code style={{ color: "var(--accent-primary)" }}>.env.local</code> under X_ACCOUNT_{selectedAccount.id}_* prefix keys.
+                  <div style={{
+                    padding: "12px 14px",
+                    background: selectedAccount.apiKeyConfigured ? "var(--accent-secondary-muted)" : "var(--bg-tertiary)",
+                    borderRadius: "var(--radius-md)",
+                    fontSize: "12px",
+                    color: "var(--text-secondary)",
+                    lineHeight: 1.6,
+                  }}>
+                    {selectedAccount.apiKeyConfigured ? (
+                      <>✓ Credentials found in server environment. Use <strong>Verify Connections</strong> on the accounts list to test them against the X API.</>
+                    ) : (
+                      <>Credentials are read from server environment variables — set these in <code style={{ color: "var(--accent-primary)" }}>.env.local</code> (dev) or your hosting provider&apos;s env settings (prod), then redeploy:</>
+                    )}
+                    <pre style={{ margin: "8px 0 0", fontSize: "11px", color: "var(--text-tertiary)", whiteSpace: "pre-wrap" }}>
+{`X_ACCOUNT_${selectedAccount.id}_API_KEY
+X_ACCOUNT_${selectedAccount.id}_API_SECRET
+X_ACCOUNT_${selectedAccount.id}_ACCESS_TOKEN
+X_ACCOUNT_${selectedAccount.id}_ACCESS_TOKEN_SECRET`}
+                    </pre>
                   </div>
                 </div>
               )}
@@ -575,18 +562,19 @@ export default function AccountsPage() {
                   <h4 style={{ fontSize: "13px", fontWeight: 600, color: "var(--text-secondary)" }}>
                     Typefully API Integration
                   </h4>
-                  <div>
-                    <label className="label">Typefully API Key</label>
-                    <input
-                      type="password"
-                      className="input"
-                      placeholder={selectedAccount.typefullyConfigured ? "••••••••••••••••" : "Paste Typefully API Key"}
-                      value={apiKeys.typefullyApiKey}
-                      onChange={(e) => setApiKeys({ ...apiKeys, typefullyApiKey: e.target.value })}
-                    />
-                  </div>
-                  <div style={{ padding: "10px 12px", background: "var(--bg-tertiary)", borderRadius: "var(--radius-md)", fontSize: "12px", color: "var(--text-tertiary)" }}>
-                    Keys will write to <code style={{ color: "var(--accent-primary)" }}>.env.local</code> under TYPEFULLY_ACCOUNT_{selectedAccount.id}_API_KEY.
+                  <div style={{
+                    padding: "12px 14px",
+                    background: selectedAccount.typefullyConfigured ? "var(--accent-secondary-muted)" : "var(--bg-tertiary)",
+                    borderRadius: "var(--radius-md)",
+                    fontSize: "12px",
+                    color: "var(--text-secondary)",
+                    lineHeight: 1.6,
+                  }}>
+                    {selectedAccount.typefullyConfigured ? (
+                      <>✓ Typefully API key found in server environment.</>
+                    ) : (
+                      <>Set <code style={{ color: "var(--accent-primary)" }}>TYPEFULLY_ACCOUNT_{selectedAccount.id}_API_KEY</code> in <code style={{ color: "var(--accent-primary)" }}>.env.local</code> (dev) or your hosting provider&apos;s env settings (prod), then redeploy.</>
+                    )}
                   </div>
                 </div>
               )}

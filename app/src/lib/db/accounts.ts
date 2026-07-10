@@ -7,6 +7,20 @@ const ACCOUNTS_FILE = path.resolve(process.cwd(), "personas/accounts.json");
 
 const defaultMix: ContentMix = { capx: 55, niche: 30, personal: 15 };
 
+/** True when the account's full X OAuth 1.0a credential set exists in env vars. */
+export function xCredsConfigured(accountId: string): boolean {
+  return !!(
+    process.env[`X_ACCOUNT_${accountId}_API_KEY`] &&
+    process.env[`X_ACCOUNT_${accountId}_API_SECRET`] &&
+    process.env[`X_ACCOUNT_${accountId}_ACCESS_TOKEN`] &&
+    process.env[`X_ACCOUNT_${accountId}_ACCESS_TOKEN_SECRET`]
+  );
+}
+
+export function typefullyCredsConfigured(accountId: string): boolean {
+  return !!process.env[`TYPEFULLY_ACCOUNT_${accountId}_API_KEY`];
+}
+
 const defaultAccounts: Account[] = [
   { id: "1", name: "Account 1", handle: "@persona1", personaId: "1", publishMethod: "manual", contentMix: defaultMix, status: "disconnected", apiKeyConfigured: false, typefullyConfigured: false, color: "var(--account-1)", createdAt: new Date().toISOString() },
   { id: "2", name: "Account 2", handle: "@persona2", personaId: "2", publishMethod: "manual", contentMix: defaultMix, status: "disconnected", apiKeyConfigured: false, typefullyConfigured: false, color: "var(--account-2)", createdAt: new Date().toISOString() },
@@ -119,18 +133,27 @@ export async function getAccounts(): Promise<Account[]> {
           personal: act.personalMix,
         },
         status: act.status as any,
-        apiKeyConfigured: !!(act.apiKey && act.accessToken),
-        typefullyConfigured: !!act.typefullyApiKey,
+        apiKeyConfigured: xCredsConfigured(act.id),
+        typefullyConfigured: typefullyCredsConfigured(act.id),
         color: act.color,
         createdAt: act.createdAt.toISOString(),
       }));
     } catch (err) {
       console.warn("Database error, falling back to file storage:", err);
-      return loadAccountsFromFile();
+      return withEnvFlags(loadAccountsFromFile());
     }
   }
 
-  return loadAccountsFromFile();
+  return withEnvFlags(loadAccountsFromFile());
+}
+
+/** Credentials live in env vars, so the configured flags are always derived, never stored. */
+function withEnvFlags(accounts: Account[]): Account[] {
+  return accounts.map((act) => ({
+    ...act,
+    apiKeyConfigured: xCredsConfigured(act.id),
+    typefullyConfigured: typefullyCredsConfigured(act.id),
+  }));
 }
 
 /**
