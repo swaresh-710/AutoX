@@ -7,10 +7,15 @@ export interface PublishResult {
   error?: string;
 }
 
+export interface PublishOptions {
+  /** When set, the tweet is posted as a reply to this tweet ID. */
+  inReplyToTweetId?: string;
+}
+
 /**
  * Publish a tweet directly to X/Twitter using the account's API credentials.
  */
-async function publishToX(account: Account, text: string): Promise<PublishResult> {
+async function publishToX(account: Account, text: string, options?: PublishOptions): Promise<PublishResult> {
   const accountId = account.id;
 
   // Retrieve keys from environment variables matching prefix
@@ -34,7 +39,12 @@ async function publishToX(account: Account, text: string): Promise<PublishResult
       accessSecret,
     });
 
-    const response = await client.v2.tweet(text);
+    const response = await client.v2.tweet(
+      text,
+      options?.inReplyToTweetId
+        ? { reply: { in_reply_to_tweet_id: options.inReplyToTweetId } }
+        : undefined
+    );
     return {
       success: true,
       tweetId: response.data.id,
@@ -100,7 +110,11 @@ async function publishToTypefully(account: Account, text: string): Promise<Publi
 /**
  * Main publisher router. Handles manual, x-api, and typefully methods.
  */
-export async function publishTweet(account: Account, text: string): Promise<PublishResult> {
+export async function publishTweet(
+  account: Account,
+  text: string,
+  options?: PublishOptions
+): Promise<PublishResult> {
   const method = account.publishMethod;
 
   if (method === "manual") {
@@ -112,10 +126,17 @@ export async function publishTweet(account: Account, text: string): Promise<Publ
   }
 
   if (method === "x-api") {
-    return publishToX(account, text);
+    return publishToX(account, text, options);
   }
 
   if (method === "typefully") {
+    if (options?.inReplyToTweetId) {
+      return {
+        success: false,
+        error:
+          "Replies to existing tweets are not supported via Typefully. Switch this account's publishing method to x-api to send replies.",
+      };
+    }
     return publishToTypefully(account, text);
   }
 

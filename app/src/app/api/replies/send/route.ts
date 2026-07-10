@@ -56,8 +56,21 @@ export async function POST(request: Request) {
       );
     }
 
-    // 3. Publish reply tweet
-    const result = await publishTweet(account, selectedVariant);
+    // 3. Publish as an actual reply — extract the target tweet ID from the URL
+    const tweetIdMatch = replyDraft.sourceTweetUrl.match(/\/status(?:es)?\/(\d+)/);
+    if (!tweetIdMatch && account.publishMethod === "x-api") {
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Could not extract a tweet ID from source URL "${replyDraft.sourceTweetUrl}" — the reply cannot be threaded.`,
+        },
+        { status: 400 }
+      );
+    }
+
+    const result = await publishTweet(account, selectedVariant, {
+      inReplyToTweetId: tweetIdMatch ? tweetIdMatch[1] : undefined,
+    });
 
     if (result.success) {
       const nowStr = new Date().toISOString();
@@ -65,7 +78,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true, tweetId: result.tweetId });
     } else {
       await updateReplyDraftStatus(replyId, "failed", selectedVariant);
-      addAlert(
+      await addAlert(
         account.id,
         account.handle,
         `Failed to send reply to ${replyDraft.sourceTweetUrl}: ${result.error || "API error"}`,

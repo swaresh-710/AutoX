@@ -117,6 +117,16 @@ model MetricSnapshot {
   tweet        Tweet    @relation(fields: [tweetId], references: [id], onDelete: Cascade)
 }
 
+model Alert {
+  id            String   @id @default(uuid())
+  accountId     String
+  accountHandle String
+  message       String   @db.Text
+  severity      String   @default("error") // "info", "warning", "error"
+  resolved      Boolean  @default(false)
+  createdAt     DateTime @default(now())
+}
+
 model AppSettings {
   id                  String   @id @default("global")
   defaultModel        String   @default("gemini-flash")

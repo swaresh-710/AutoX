@@ -33,7 +33,7 @@ export class GeminiProvider implements LLMProvider {
 
     try {
       const model = this.client.getGenerativeModel({
-        model: "gemini-1.5-flash", // We use Gemini 1.5 Flash (current standard name)
+        model: "gemini-2.5-flash", // gemini-1.5-flash is retired
         generationConfig: {
           temperature,
           responseMimeType: "application/json",
@@ -59,7 +59,7 @@ export class GeminiProvider implements LLMProvider {
           seedTweetsUsed: persona.seedTweets?.[pillar] || [],
           nicheContext: params.nicheContext,
           promptVersion: "1.0",
-          model: "gemini-1.5-flash",
+          model: "gemini-2.5-flash",
         },
       };
     } catch (error) {
@@ -78,7 +78,7 @@ export class GeminiProvider implements LLMProvider {
 
     try {
       const model = this.client.getGenerativeModel({
-        model: "gemini-1.5-flash",
+        model: "gemini-2.5-flash",
         generationConfig: {
           temperature: 0.7,
           responseMimeType: "application/json",

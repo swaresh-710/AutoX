@@ -51,6 +51,67 @@ async function isDbConnected(): Promise<boolean> {
   }
 }
 
+type DbPlanWithSlots = Awaited<
+  ReturnType<
+    typeof prisma.weeklyPlan.findMany<{
+      include: { slots: { include: { variants: true } } };
+    }>
+  >
+>[number];
+
+function mapDbPlan(plan: DbPlanWithSlots): WeeklyPlan {
+  return {
+    id: plan.id,
+    accountId: plan.accountId,
+    personaId: plan.personaId,
+    weekStart: plan.weekStart.toISOString().split("T")[0],
+    status: plan.status as any,
+    slots: plan.slots.map((slot) => ({
+      id: slot.id,
+      dayOfWeek: slot.dayOfWeek,
+      date: slot.date.toISOString().split("T")[0],
+      pillar: slot.pillar as any,
+      scheduledTime: slot.scheduledTime,
+      status: slot.status as any,
+      selectedVariantId: slot.selectedVariantId,
+      variants: slot.variants.map((v) => ({
+        id: v.id,
+        body: v.body,
+        generatedBy: v.generatedBy as any,
+        createdAt: v.createdAt.toISOString(),
+        generationMetadata: {
+          personaTraitsUsed: v.traitsUsed,
+          factsUsed: v.factsUsed,
+          seedTweetsUsed: v.seedTweetsUsed,
+          nicheContext: v.nicheContext || undefined,
+          promptVersion: v.promptVersion,
+        },
+      })),
+    })),
+    createdAt: plan.createdAt.toISOString(),
+  };
+}
+
+/**
+ * Loads every weekly plan. DB is the source of truth when configured;
+ * the JSON file is only a local-dev fallback (it is empty/read-only on Vercel).
+ */
+export async function getAllPlans(): Promise<WeeklyPlan[]> {
+  const dbConnected = await isDbConnected();
+  if (dbConnected) {
+    try {
+      const plans = await prisma.weeklyPlan.findMany({
+        include: { slots: { include: { variants: true } } },
+        orderBy: { weekStart: "desc" },
+      });
+      return plans.map(mapDbPlan);
+    } catch (err) {
+      console.warn("Database getAllPlans error, falling back to files:", err);
+    }
+  }
+  return loadPlansFromFile();
+}
+
 export async function getWeeklyPlan(
   accountId: string,
   weekStartStr: string
@@ -74,36 +135,7 @@ export async function getWeeklyPlan(
       });
 
       if (plan) {
-        return {
-          id: plan.id,
-          accountId: plan.accountId,
-          personaId: plan.personaId,
-          weekStart: weekStartStr,
-          status: plan.status as any,
-          slots: plan.slots.map((slot) => ({
-            id: slot.id,
-            dayOfWeek: slot.dayOfWeek,
-            date: slot.date.toISOString().split("T")[0],
-            pillar: slot.pillar as any,
-            scheduledTime: slot.scheduledTime,
-            status: slot.status as any,
-            selectedVariantId: slot.selectedVariantId,
-            variants: slot.variants.map((v) => ({
-              id: v.id,
-              body: v.body,
-              generatedBy: v.generatedBy as any,
-              createdAt: v.createdAt.toISOString(),
-              generationMetadata: {
-                personaTraitsUsed: v.traitsUsed,
-                factsUsed: v.factsUsed,
-                seedTweetsUsed: v.seedTweetsUsed,
-                nicheContext: v.nicheContext || undefined,
-                promptVersion: v.promptVersion,
-              },
-            })),
-          })),
-          createdAt: plan.createdAt.toISOString(),
-        };
+        return { ...mapDbPlan(plan), weekStart: weekStartStr };
       }
     } catch (err) {
       console.warn("Database getWeeklyPlan error, falling back to files:", err);

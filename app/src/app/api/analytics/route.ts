@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAccounts } from "@/lib/db/accounts";
-import { loadPlansFromFile } from "@/lib/db/plans";
+import { getAllPlans } from "@/lib/db/plans";
 
 export interface AccountPerformance {
   id: string;
@@ -18,7 +18,7 @@ export interface AccountPerformance {
 export async function GET() {
   try {
     const accounts = await getAccounts();
-    const plans = loadPlansFromFile();
+    const plans = await getAllPlans();
 
     const performances: AccountPerformance[] = accounts.map((act) => {
       // Calculate real stats from published slots of this account

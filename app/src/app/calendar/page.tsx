@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Pillar } from "@/types";
+import { Pillar, WeeklyPlan } from "@/types";
 import { CalendarEvent } from "@/app/api/calendar/route";
 
 const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
