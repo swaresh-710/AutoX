@@ -3,7 +3,7 @@ import { clearAlerts } from "@/lib/db/alerts";
 
 export async function POST() {
   try {
-    const success = clearAlerts();
+    const success = await clearAlerts();
     return NextResponse.json({ success });
   } catch (error: any) {
     return NextResponse.json(

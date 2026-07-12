@@ -26,15 +26,16 @@ export class ClaudeProvider implements LLMProvider {
   }
 
   async generateTweet(params: GenerateTweetParams): Promise<GenerateTweetResult> {
-    const { persona, pillar, temperature = 0.8 } = params;
+    const { persona, pillar } = params;
     const systemPrompt = buildSystemPrompt(persona);
     const userPrompt = buildUserPrompt(params);
 
     try {
+      // claude-3-5-sonnet-20240620 was retired Oct 2025. Sonnet 5 rejects
+      // non-default sampling params, so temperature is no longer sent.
       const response = await this.client.messages.create({
-        model: "claude-3-5-sonnet-20240620", // Standard Claude 3.5 Sonnet model name
+        model: "claude-sonnet-5",
         max_tokens: 1000,
-        temperature,
         system: systemPrompt,
         messages: [{ role: "user", content: userPrompt }],
       });
@@ -58,7 +59,7 @@ export class ClaudeProvider implements LLMProvider {
           seedTweetsUsed: persona.seedTweets?.[pillar] || [],
           nicheContext: params.nicheContext,
           promptVersion: "1.0",
-          model: "claude-3-5-sonnet",
+          model: "claude-sonnet-5",
         },
       };
     } catch (error) {
@@ -77,9 +78,8 @@ export class ClaudeProvider implements LLMProvider {
 
     try {
       const response = await this.client.messages.create({
-        model: "claude-3-5-sonnet-20240620",
+        model: "claude-sonnet-5",
         max_tokens: 500,
-        temperature: 0.7,
         system: systemPrompt,
         messages: [{ role: "user", content: userPrompt }],
       });

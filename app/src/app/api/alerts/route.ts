@@ -3,7 +3,7 @@ import { getAlerts } from "@/lib/db/alerts";
 
 export async function GET() {
   try {
-    const alerts = getAlerts();
+    const alerts = await getAlerts();
     return NextResponse.json({ success: true, alerts });
   } catch (error: any) {
     return NextResponse.json(

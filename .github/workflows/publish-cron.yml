@@ -1,0 +1,34 @@
+name: Publish scheduled tweets
+
+# Vercel's Hobby tier only allows daily crons, so this workflow pings the
+# publish endpoint every 15 minutes instead. Configure two repository secrets:
+#   CRON_URL    — e.g. https://your-app.vercel.app/api/publish/cron
+#   CRON_SECRET — same value as the CRON_SECRET env var on Vercel
+#
+# Note: GitHub schedules are best-effort and can lag a few minutes under load.
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch: {}
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call publish cron endpoint
+        env:
+          CRON_URL: ${{ secrets.CRON_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$CRON_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "CRON_URL / CRON_SECRET secrets not configured — skipping."
+            exit 0
+          fi
+          response=$(curl -sS -w "\n%{http_code}" -X POST "$CRON_URL" \
+            -H "Authorization: Bearer $CRON_SECRET")
+          body=$(echo "$response" | head -n -1)
+          status=$(echo "$response" | tail -n 1)
+          echo "Status: $status"
+          echo "Body: $body"
+          [ "$status" = "200" ]

@@ -42,18 +42,36 @@ model WeeklyPlan {
 }
 
 model ContentSlot {
-  id                String         @id @default(uuid())
+  id                String               @id @default(uuid())
   weeklyPlanId      String
-  dayOfWeek         Int            // 0=Mon, 6=Sun
+  dayOfWeek         Int                  // 0=Mon, 6=Sun
   date              DateTime
-  pillar            String         // "capx", "niche", "personal"
-  scheduledTime     String         // "HH:MM"
-  status            String         @default("draft") // "draft", "approved", "scheduled", "published", "failed"
+  pillar            String               // "capx", "niche", "personal"
+  scheduledTime     String               // "HH:MM"
+  status            String               @default("draft") // "draft", "approved", "scheduled", "published", "failed"
   selectedVariantId String?
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
-  weeklyPlan        WeeklyPlan     @relation(fields: [weeklyPlanId], references: [id], onDelete: Cascade)
+  xTweetId          String?              // set when published via the X API — used for metrics ingestion
+  publishedAt       DateTime?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  weeklyPlan        WeeklyPlan           @relation(fields: [weeklyPlanId], references: [id], onDelete: Cascade)
   variants          TweetVariant[]
+  metricSnapshots   SlotMetricSnapshot[]
+}
+
+model SlotMetricSnapshot {
+  id            String      @id @default(uuid())
+  contentSlotId String
+  impressions   Int         @default(0)
+  likes         Int         @default(0)
+  replies       Int         @default(0)
+  reposts       Int         @default(0) // retweets + quotes
+  bookmarks     Int         @default(0)
+  linkClicks    Int         @default(0) // from non_public_metrics when available
+  capturedAt    DateTime    @default(now())
+  contentSlot   ContentSlot @relation(fields: [contentSlotId], references: [id], onDelete: Cascade)
+
+  @@index([contentSlotId, capturedAt])
 }
 
 model TweetVariant {
@@ -115,6 +133,16 @@ model MetricSnapshot {
   linkClicks   Int      @default(0)
   capturedAt   DateTime @default(now())
   tweet        Tweet    @relation(fields: [tweetId], references: [id], onDelete: Cascade)
+}
+
+model Alert {
+  id            String   @id @default(uuid())
+  accountId     String
+  accountHandle String
+  message       String   @db.Text
+  severity      String   @default("error") // "info", "warning", "error"
+  resolved      Boolean  @default(false)
+  createdAt     DateTime @default(now())
 }
 
 model AppSettings {

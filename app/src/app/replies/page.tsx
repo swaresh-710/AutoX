@@ -112,6 +112,7 @@ export default function RepliesPage() {
           variants: data.variants,
           selectedVariant: data.variants[0],
           status: "drafted",
+          sentAt: null,
           createdAt: new Date().toISOString(),
         };
 

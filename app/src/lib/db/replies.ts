@@ -64,9 +64,9 @@ export async function getReplies(): Promise<ReplyDraft[]> {
         sourceTweetText: r.sourceTweetText,
         personaId: r.personaId,
         variants: r.variants,
-        selectedVariant: r.selectedVariant || undefined,
+        selectedVariant: r.selectedVariant,
         status: r.status as any,
-        sentAt: r.sentAt ? r.sentAt.toISOString() : undefined,
+        sentAt: r.sentAt ? r.sentAt.toISOString() : null,
         createdAt: r.createdAt.toISOString(),
       }));
     } catch (err) {
